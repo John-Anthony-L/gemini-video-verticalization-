@@ -9,12 +9,29 @@ Convert 16:9 source videos into 9:16 (vertical) crops suitable for Shorts/Reels/
 - Deterministic output paths under `OUTPUT_VIDEOS/`
 
 ## Repo layout
-- `video-vert.py` — CLI entry point for verticalization (single or batch)
-- `src/utils.py` — FFmpeg/processing helpers (segment creation, concat, path setup)
-- `src/gemini_functions.py` — Gemini prompt and response handling for crop JSON
-- `INPUT_VIDEOS/` — Place your input `.mp4` files here
-- `OUTPUT_VIDEOS/` — Generated crop JSON and final verticalized `.mp4`
-- `requirements.txt` — Python dependencies
+## Repository layout
+```
+gemini-video-verticalization-/
+├─ .env                      # Your local secrets (not committed); copy from .env.example
+├─ .env.example              # Template for environment variables
+├─ .gitignore
+├─ LICENSE                   # Project license
+├─ README.md                 # This file
+├─ requirements.txt          # Python dependencies
+├─ video-vert.py             # CLI entry point (single or batch processing)
+│
+├─ INPUT_VIDEOS/             # Put input .mp4 files here (gitignored)
+├─ OUTPUT_VIDEOS/            # Outputs: crop JSON + final vertical .mp4 (gitignored)
+│
+├─ src/
+│  ├─ utils.py               # FFmpeg pipeline: segments, concat, path constants
+│  └─ gemini_functions.py    # Gemini prompt + crop JSON generation
+│
+└─ (examples and temp)
+  ├─ output_vertical_crop_w_framing*.mp4
+  ├─ crop_data*.json
+  └─ __pycache__/
+```
 
 ## Prerequisites
 - macOS or Linux (Windows WSL works as well)
@@ -50,9 +67,8 @@ Convert 16:9 source videos into 9:16 (vertical) crops suitable for Shorts/Reels/
      ```
 
 ## Google Cloud configuration
-This project uses two Google Cloud services:
+This project uses one Google Cloud service:
 - Vertex AI (Gemini) for video analysis (crop data)
-- Optional: Video Intelligence API for transcription (used by `audio-subitiltes.py` and described in `TRANSCRIPTION_SETUP.md`)
 
 ### Enable required APIs
 Run the following once for your project:
@@ -63,10 +79,8 @@ gcloud auth application-default login
 # Set default project
 gcloud config set project YOUR_PROJECT_ID
 
-# Enable Vertex AI and Video Intelligence APIs
+# Enable Vertex AI
 gcloud services enable aiplatform.googleapis.com
-# Optional (only if you plan to use transcription scripts)
-gcloud services enable videointelligence.googleapis.com
 ```
 
 ### Authentication
@@ -75,6 +89,12 @@ This repo uses Application Default Credentials (ADC). After you run `gcloud auth
 Headless or CI/CD: set `GOOGLE_APPLICATION_CREDENTIALS` in `.env` to point to a service account key JSON and skip interactive login. ADC will use that file automatically.
 
 ## Usage
+
+- for help, use
+  ```bash
+  python3 video-vert.py -h
+  ```
+
 Place your `.mp4` files in `INPUT_VIDEOS/`.
 
 - Process a single file by name (looked up in `INPUT_VIDEOS/`):
