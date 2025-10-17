@@ -108,8 +108,11 @@ def extract_video_crop_data(video_path, video_width=1920, video_height=1080):
         Lookroom/Leadroom: If a subject is looking or moving strongly to the left or right, bias the crop slightly in that direction to leave "room to look into" the frame.
         Action and Gestures: If the primary focus involves hand gestures or interacting with an object, the crop should be wide enough to contain these critical elements if possible.
         Smooth Transitions: When a change in focus necessitates a shift in the bounding box (a "pan"), the transition should be minimized and calculated to anticipate the required movement slightly, rather than reactive jumps.
+        Prioritize Smoothness: Avoid jittery or rapid shifts in the crop position. Aim for fluid, cinematic movements that enhance viewer engagement.
         Static Scenes: In scenes with little movement or a single static subject, maintain a steady crop position to avoid unnecessary motion.
         Multiple Subjects: If multiple subjects are present, prioritize the one who is most central to the scene's action or narrative at that moment.
+        Avoid Cutting Off People or Objects: Ensure that no important parts of people (like heads or hands) or objects are cut off by the crop boundaries.
+        Centered Objects: When focusing on an object, center it within the frame to maintain visual balance.
         Complex Scenes: In scenes with multiple points of interest, choose the one that best represents the overall context or narrative of the scene.
         Avoid Frequent Shifts: Do not change the crop position too frequently. Aim for stability and only adjust when there is a clear and significant change in the point of focus.
 

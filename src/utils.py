@@ -4,29 +4,18 @@ import re
 import os
 import tempfile
 import shutil
+import argparse
 
-# --- Configuration ---
-# Use dedicated input/output folders
-INPUT_DIR = "INPUT_VIDEOS"
-OUTPUT_DIR = "OUTPUT_VIDEOS"
-
-# Set the input video name (file should live under INPUT_VIDEOS/)
-INPUT_VIDEO_NAME = "Krapopolis_FBCKRA308HL_S02E05_VOD_CC_lowres_chapter_1.mp4"
-
-# Resolve paths
-INPUT_VIDEO = os.path.join(INPUT_DIR, INPUT_VIDEO_NAME)
-
-# Derive output names from the input filename and place under OUTPUT_VIDEOS/
-_input_base = os.path.splitext(os.path.basename(INPUT_VIDEO_NAME))[0]
-OUTPUT_VIDEO = os.path.join(OUTPUT_DIR, f"{_input_base}_vertical_crop.mp4")
-CROP_DATA_FILE = os.path.join(OUTPUT_DIR, f"{_input_base}_crop_data.json")
+# --- Paths and constants (absolute) ---
+# Resolve project root as the parent of this 'src' directory
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+INPUT_DIR = os.path.join(ROOT_DIR, "INPUT_VIDEOS")
+OUTPUT_DIR = os.path.join(ROOT_DIR, "OUTPUT_VIDEOS")
 
 # Fixed crop dimensions
 CROP_WIDTH = 607
 CROP_HEIGHT = 1080
 CROP_Y = 0
-
-# --- Helper Functions ---
 
 def load_crop_data(json_file):
     """
@@ -55,7 +44,7 @@ def generate_crop_data_with_gemini(video_path, output_json_path):
     Uses the video's actual resolution for coordinate generation.
     """
     try:
-        from gemini_functions import extract_video_crop_data
+        from src.gemini_functions import extract_video_crop_data
         
         # Get video resolution first
         video_info = get_video_info(video_path)
@@ -288,6 +277,11 @@ def concatenate_segments(segment_files, output_file, temp_dir):
         for segment_file in segment_files:
             f.write(f"file '{segment_file}'\n")
     
+    # Ensure output directory exists
+    out_dir = os.path.dirname(output_file)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+
     # Use concat demuxer to join segments
     command = [
         "ffmpeg",
@@ -379,20 +373,23 @@ def run_ffmpeg_crop(input_file, output_file, crop_filter):
         print("\nError: ffmpeg command not found. Ensure FFmpeg is installed and in your PATH.")
 
 
-# --- Execution ---
-if __name__ == "__main__":
-    # Ensure output directory exists
+def verticalize_one_video(input_video_path: str) -> bool:
+    """Verticalize a single video, generating crop data and writing outputs under OUTPUT_DIR.
+
+    Returns True on success, False on failure.
+    """
+    # Normalize paths and ensure output directory exists
+    input_video_path = os.path.abspath(input_video_path)
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # Check if input video exists first
-    if not os.path.exists(INPUT_VIDEO):
-        print(f"Error: Input video '{INPUT_VIDEO}' not found.")
-        print(f"Place the file under the '{INPUT_DIR}/' folder or update INPUT_VIDEO_NAME.")
-        exit(1)
-    
-    # Get video information
+    # Resolve names and output paths
+    base = os.path.splitext(os.path.basename(input_video_path))[0]
+    output_video = os.path.join(OUTPUT_DIR, f"{base}_vertical_crop_w_framing_pipeline.mp4")
+    crop_json = os.path.join(OUTPUT_DIR, f"{base}_crop_data_framing_temp.json")
+
+    # Analyze input
     print("Analyzing input video...")
-    video_info = get_video_info(INPUT_VIDEO)
+    video_info = get_video_info(input_video_path)
     if video_info:
         print(f"Input Resolution: {video_info['width']}x{video_info['height']}")
         print(f"Duration: {video_info['duration']:.2f} seconds")
@@ -402,41 +399,36 @@ if __name__ == "__main__":
             print(f"Audio Codec: {video_info['audio_codec']}")
         print(f"File Size: {video_info['size'] / (1024*1024):.1f} MB")
         print()
-        
         print(f"Target crop size: {int(video_info['height'] * 9/16)}x{video_info['height']} (9:16 aspect ratio)")
         print()
     else:
-        print("Could not get video information, proceeding anyway...")
-        print()
-    
-    # Check if crop data file exists, if not generate it with Gemini
+        print("Could not get video information, proceeding anyway...\n")
 
+    # Generate crop data with Gemini
     print("Generating crop data with Gemini...")
-    success = generate_crop_data_with_gemini(INPUT_VIDEO, CROP_DATA_FILE)
-    if not success:
-        print("Failed to generate crop data. Exiting.")
-        exit(1)    
-    # Load crop data from JSON file
-    crop_data = load_crop_data(CROP_DATA_FILE)
+    if not generate_crop_data_with_gemini(input_video_path, crop_json):
+        print("Failed to generate crop data.")
+        return False
 
-    
+    crop_data = load_crop_data(crop_json)
     if crop_data is None:
-        exit(1)
-    
+        return False
+
     print("Starting video verticalization process...")
-    print(f"Input: {INPUT_VIDEO}")
-    print(f"Output: {OUTPUT_VIDEO}")
-    print(f"Crop data: {CROP_DATA_FILE}")
+    print(f"Input: {input_video_path}")
+    print(f"Output: {output_video}")
+    print(f"Crop data: {crop_json}")
     print(f"Processing {len(crop_data)} crop segments")
     print("=" * 50)
-    
-    # Get video resolution for dynamic cropping
+
+    # Determine resolution for dynamic cropping
     video_resolution = None
     if video_info and 'width' in video_info and 'height' in video_info:
         video_resolution = (video_info['width'], video_info['height'])
-    
-    success = process_video_segments(INPUT_VIDEO, OUTPUT_VIDEO, crop_data, video_resolution)
-    
+
+    success = process_video_segments(input_video_path, output_video, crop_data, video_resolution)
     if not success:
         print("\nVerticalization failed!")
-        exit(1)
+        return False
+
+    return True
