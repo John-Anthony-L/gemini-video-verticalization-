@@ -1,4 +1,4 @@
-# Fox Verticalization
+# Video Verticalization
 
 Convert 16:9 source videos into 9:16 (vertical) crops suitable for Shorts/Reels/TikTok using AI-assisted framing. The pipeline analyzes the video with Google Vertex AI (Gemini) to generate smart crop coordinates, then renders a final verticalized video with FFmpeg.
 
