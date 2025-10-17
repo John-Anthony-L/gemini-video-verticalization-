@@ -20,8 +20,8 @@ gemini-video-verticalization-/
 ├─ requirements.txt          # Python dependencies
 ├─ video-vert.py             # CLI entry point (single or batch processing)
 │
-├─ INPUT_VIDEOS/             # Put input .mp4 files here (gitignored)
-├─ OUTPUT_VIDEOS/            # Outputs: crop JSON + final vertical .mp4 (gitignored)
+├─ INPUT_VIDEOS/             # Put input .mp4 files here
+├─ OUTPUT_VIDEOS/            # Outputs: crop JSON + final vertical .mp4 
 │
 ├─ src/
 │  ├─ utils.py               # FFmpeg pipeline: segments, concat, path constants
